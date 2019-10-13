@@ -19,14 +19,16 @@ typedef ESP8266WebServer WiFiWebServer;
 #define PARAM_FILE      "/param.json"
 #define AUX_SETTING_URI "/mqtt_setting"
 #define AUX_SAVE_URI    "/mqtt_save"
+#define HOME_URI    "/"
 
 #define DHTTYPE DHT22
 #define DHTPIN            14
 
+WiFiWebServer Server;
 WiFiClient espClient;
 PubSubClient client(espClient);
 
-AutoConnect Portal;
+AutoConnect Portal(Server);
 AutoConnectConfig Config;
 
 long lastMsg = 0;
@@ -44,10 +46,10 @@ uint32_t delayMS;
 char c_uvIndex_max[8];
 
 unsigned long   sampletime_ms1 = 3000;
-float temperature, humidity, pressure, altitude;
+String temperature, humidity;
 //char* ssid     = "Cerber0";         // The SSID (name) of the Wi-Fi network you want to connect to
 //const char* password = "C4nc3rb3r0";     // The password of the Wi-Fi network
-String mqtt_server;//= "192.168.0.162";
+String mqtt_server = "192.168.0.162";
 
 String mq2_lpg, mq2_methane, mq2_smoke, mq2_hydrogen, mq9_co, mq9_methane, mq9_lpg, mq135_co2, mq8_hydrogen, mq4_methane, mq6_lpg, mq7_co;
 
@@ -143,12 +145,38 @@ static const char AUX_mqtt_setting[] PROGMEM = R"raw(
 ]
 )raw";
 
+static const char PROGMEM rootHtml[] = R"(
+  <!DOCTYPE html>
+  <html>
+  <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  </head>
+  <body>
+  <h2 style="align:center;color:#3366ff;">AirQ</h2>
+  <p>Temperature : {{temp}} ºC</p>
+  <p>Humidity : {{hum}} %</p>
+  </body>
+  </html>
+)";
+
 String  channelId_sensors;
 String  channelId_ctrl;
 String  hostName;
 
 String s_mq2_lpg, s_mq2_methane, s_mq2_smoke, s_mq2_hydrogen, s_mq9_co, s_mq9_methane, s_mq9_lpg;
 String s_mq135_co2, s_mq8_hydrogen, s_mq4_methane, s_mq6_lpg, s_mq7_co, s_humidity, s_temperature, s_uv;
+
+String getTemperature(PageArgument& args) {
+  return temperature;
+}
+
+String getHumidity(PageArgument& args) {
+  return humidity;
+}
+
+/*PageElement rootElm(rootHtml, {{"temp", getTemperature}, {"hum", getHumidity}});
+PageBuilder root("/", {rootElm});*/
 
 void genTopics() {
    s_mq2_lpg = channelId_sensors + "/MQ2_LPG";
@@ -222,7 +250,7 @@ String saveParams(AutoConnectAux& aux, PageArgument& args) {
   param.close();
 
   // Echo back saved parameters to AutoConnectAux page.
-  AutoConnectText&  echo = aux["parameters"].as<AutoConnectText>();
+  AutoConnectText&  echo = aux["web"].as<AutoConnectText>();
   echo.value = "Server: " + mqtt_server;
   echo.value += mqttserver.isValid() ? String(" (OK)") : String(" (ERR)");
   echo.value += "<br>Channel Sensors ID: " + channelId_sensors + "<br>";
@@ -231,6 +259,17 @@ String saveParams(AutoConnectAux& aux, PageArgument& args) {
 
   return String("");
 }
+
+/*void handleRoot() {
+  ESP8266WebServer& IntServer = Portal.host();
+  IntServer.send(200, "text/html", "Temperature : "+temperature);
+}
+
+
+void handleNotFound() {
+  ESP8266WebServer& IntServer = Portal.host();
+  IntServer.send(404, "text/html", "Unknown.");
+}*/
 
 void callback(char* topic, byte* payload, unsigned int length) {
   //Serial.println((char)payload[0]);
@@ -263,7 +302,8 @@ void callback(char* topic, byte* payload, unsigned int length) {
       Serial.println("Error reading temperature!");
     }
     else {
-      client.publish(String(s_temperature).c_str(), String(event.temperature).c_str());
+      temperature = String(event.temperature).c_str();
+      client.publish(String(s_temperature).c_str(), temperature.c_str());
     }
   }
   else if ((char)payload[0] == 'H') {
@@ -279,7 +319,8 @@ void callback(char* topic, byte* payload, unsigned int length) {
       Serial.println("Error reading humidity!");
     }
     else {
-      client.publish(String(s_humidity).c_str(), String(event.relative_humidity).c_str());
+      humidity = String(event.relative_humidity).c_str();
+      client.publish(String(s_humidity).c_str(), humidity.c_str());
     }
   }
   else if ((char)payload[0] == 'R') {
@@ -317,7 +358,11 @@ void reconnect() {
     retries++;
     Serial.print("MQTT connection...");
     // Attempt to connect
-    if (client.connect("ESP8266Client")) {
+
+    char buffer[10]="";
+    sprintf(buffer, "espAirQ_%i", ESP.getChipId());
+
+    if (client.connect(buffer)) {
       Serial.println("connected");
       // ... and resubscribe
       client.subscribe(String(channelId_ctrl).c_str());
@@ -451,7 +496,8 @@ void serialEvent() {
           Serial.println("Error reading temperature!");
         }
         else {
-          client.publish(String(s_temperature).c_str(), String(event.temperature).c_str());
+          temperature = String(event.temperature).c_str();
+          client.publish(String(s_temperature).c_str(), temperature.c_str());
           Serial.print("Temperature: ");
           Serial.print(event.temperature);
           Serial.println(" *C");
@@ -462,9 +508,10 @@ void serialEvent() {
           Serial.println("Error reading humidity!");
         }
         else {
-          client.publish(String(s_humidity).c_str(), String(event.relative_humidity).c_str());
+          humidity = String(event.relative_humidity).c_str();
+          client.publish(String(s_humidity).c_str(), humidity.c_str());
           Serial.print("Humidity: ");
-          Serial.print(event.relative_humidity);
+          Serial.print(humidity);
           Serial.println("%");
         }
 
@@ -501,8 +548,11 @@ void serialEvent() {
       }
       else
         Serial.println("load error");
-
+      //root.insert(Server);
       if (Portal.begin()) {
+        /*ESP8266WebServer& IntServer = Portal.host();
+        IntServer.on("/", handleRoot);
+        Portal.onNotFound(handleNotFound);    // For only onNotFound.*/
         Serial.println("Connection established!");
         Serial.print("IP address:\t");
         Serial.println(WiFi.localIP());         // Send the IP address of the ESP8266 to the computer
