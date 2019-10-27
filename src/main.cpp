@@ -51,7 +51,7 @@ String temperature, humidity;
 //const char* password = "C4nc3rb3r0";     // The password of the Wi-Fi network
 String mqtt_server = "192.168.0.162";
 
-String mq2_lpg, mq2_methane, mq2_smoke, mq2_hydrogen, mq9_co, mq9_methane, mq9_lpg, mq135_co2, mq8_hydrogen, mq4_methane, mq6_lpg, mq7_co;
+String mq2_lpg, mq2_methane, mq2_smoke, mq2_hydrogen, mq9_co, mq9_methane, mq9_lpg, mq135_co2, mq8_hydrogen, mq6_lpg;
 
 UVidxClass UVix;
 DHT_Unified dht(DHTPIN, DHTTYPE);
@@ -164,8 +164,8 @@ String  channelId_sensors;
 String  channelId_ctrl;
 String  hostName;
 
-String s_mq2_lpg, s_mq2_methane, s_mq2_smoke, s_mq2_hydrogen, s_mq9_co, s_mq9_methane, s_mq9_lpg;
-String s_mq135_co2, s_mq8_hydrogen, s_mq4_methane, s_mq6_lpg, s_mq7_co, s_humidity, s_temperature, s_uv;
+String s_mq2_lpg, s_mq2_methane, s_mq2_smoke, s_mq2_hydrogen, s_mq9_methane, s_mq9_co;
+String s_mq135_co2, s_mq8_hydrogen, s_mq6_lpg, s_mq9_lpg, s_humidity, s_temperature, s_uv;
 
 String getTemperature(PageArgument& args) {
   return temperature;
@@ -188,9 +188,9 @@ void genTopics() {
    s_mq9_lpg = channelId_sensors + "/MQ9_LPG";
    s_mq135_co2 = channelId_sensors + "/MQ135_CO2";
    s_mq8_hydrogen = channelId_sensors + "/MQ8_HYDROGEN";
-   s_mq4_methane = channelId_sensors + "/MQ4_METHANE";
+   //s_mq4_methane = channelId_sensors + "/MQ4_METHANE";
    s_mq6_lpg = channelId_sensors + "/MQ6_LPG";
-   s_mq7_co = channelId_sensors + "/MQ7_CO";
+   //s_mq7_co = channelId_sensors + "/MQ7_CO";
    s_humidity = channelId_sensors + "/humidity";
    s_temperature = channelId_sensors + "/temperatureDHT22";
    s_uv = channelId_sensors + "/UV";
@@ -344,9 +344,9 @@ void callback(char* topic, byte* payload, unsigned int length) {
     client.publish(String(s_mq9_lpg).c_str(), String(mq9_lpg).c_str());
     client.publish(String(s_mq135_co2).c_str(), String(mq135_co2).c_str());
     client.publish(String(s_mq8_hydrogen).c_str(), String(mq8_hydrogen).c_str());
-    client.publish(String(s_mq4_methane).c_str(), String(mq4_methane).c_str());
+    //client.publish(String(s_mq4_methane).c_str(), String(mq4_methane).c_str());
     client.publish(String(s_mq6_lpg).c_str(), String(mq6_lpg).c_str());
-    client.publish(String(s_mq7_co).c_str(),String(mq7_co).c_str());
+    //client.publish(String(s_mq7_co).c_str(),String(mq7_co).c_str());
   }
 }
 
@@ -411,7 +411,7 @@ void serialEvent() {
     Serial.print("mq2_lpg: ");Serial.println(mq2_lpg);
     inputString = inputString.substring(mq2_lpg.length() + 1);
     int i = 1;
-    while (i < 12 )
+    while (i < 10 )
     {
       i++;
 
@@ -457,22 +457,23 @@ void serialEvent() {
           Serial.print("MQ8_Hydrogen: ");Serial.println(mq8_hydrogen);
           break;
         case 10:
-          mq4_methane = inputString.substring(0, inputString.indexOf(','));
+        /*  mq4_methane = inputString.substring(0, inputString.indexOf(','));
           inputString = inputString.substring(mq4_methane.length() + 1);
           Serial.print("MQ4_Methane mgl: ");Serial.println(mq4_methane);
           break;
-        case 11:
+        case 11:*/
           mq6_lpg = inputString.substring(0, inputString.indexOf(','));
           inputString = inputString.substring(mq6_lpg.length() + 1);
           Serial.print("MQ6_LPG ppm: ");Serial.println(mq6_lpg);
           break;
-        case 12:
+        /*case 12:
           mq7_co = inputString.substring(0, inputString.indexOf('\n'));
           inputString = inputString.substring(mq7_co.length() + 1);
           Serial.print("MQ7_CO: ");Serial.println(mq7_co);
-          break;
+          break;*/
       }
     }
+    if (!mq6_lpg.length() == 0) {
     Serial.print("MSG: ");Serial.println(inputString);
     client.publish(String(s_mq2_lpg).c_str(), String(mq2_lpg).c_str());
     client.publish(String(s_mq2_methane).c_str(), String(mq2_methane).c_str());
@@ -483,9 +484,10 @@ void serialEvent() {
     client.publish(String(s_mq9_lpg).c_str(), String(mq9_lpg).c_str());
     client.publish(String(s_mq135_co2).c_str(),String(mq135_co2).c_str());
     client.publish(String(s_mq8_hydrogen).c_str(), String(mq8_hydrogen).c_str());
-    client.publish(String(s_mq4_methane).c_str(), String(mq4_methane).c_str());
+    //client.publish(String(s_mq4_methane).c_str(), String(mq4_methane).c_str());
     client.publish(String(s_mq6_lpg).c_str(), String(mq6_lpg).c_str());
-    client.publish(String(s_mq7_co).c_str(),String(mq7_co).c_str());
+    //client.publish(String(s_mq7_co).c_str(),String(mq7_co).c_str());
+  }
     }
     }
 
