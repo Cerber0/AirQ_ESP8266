@@ -23,6 +23,7 @@ typedef ESP8266WebServer WiFiWebServer;
 
 #define DHTTYPE DHT22
 #define DHTPIN            14
+#define RESET_PIN 7
 
 WiFiWebServer Server;
 WiFiClient espClient;
@@ -325,6 +326,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
   }
   else if ((char)payload[0] == 'R') {
     Serial.println("Resetting ESP");
+//    digitalWrite(RESET_PIN, HIGH);
     ESP.restart(); //ESP.reset();
   }
   else if ((char)payload[0] == 'G') {
@@ -527,6 +529,7 @@ void serialEvent() {
     }
 
     void setup() {
+//      pinMode(RESET_PIN, INPUT);
       Serial.begin(9600);       // Start the Serial communication to send messages to the computer
 
       delay(10);
@@ -543,7 +546,9 @@ void serialEvent() {
         }
         Config.bootUri = AC_ONBOOTURI_HOME;
         Config.title = "AirQ";
+        Config.autoReconnect = true;
         Portal.config(Config);
+
 
         Portal.on(AUX_SETTING_URI, loadParams);
         Portal.on(AUX_SAVE_URI, saveParams);
